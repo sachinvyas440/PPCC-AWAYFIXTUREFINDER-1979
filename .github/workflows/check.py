@@ -15,7 +15,6 @@ import urllib.request
 URL = "https://thefixturelist.org.uk/?page_id=209&acadp_category=home_fixture_offered"
 STATE_FILE = "state.json"
 
-# Set this as a GitHub Actions secret / repo variable — see README.md
 NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "")
 
 
@@ -26,17 +25,9 @@ def fetch_page(url: str) -> str:
 
 
 def extract_listing_links(html: str):
-    """
-    The ACADP directory plugin renders each listing as a link to a detail
-    page containing 'page_id=212' (the single-listing template) together
-    with a listing ID parameter. We grab every such link + its visible
-    anchor text as a stable fingerprint of "what's currently listed".
-    """
     import re
     import html as html_module
 
-    # Matches <a href="...?acadp_listings=some-slug">Some Title</a> style links
-    # (confirmed against the live site's actual markup)
     pattern = re.compile(
         r'<a[^>]+href="([^"]*\?acadp_listings=[^"]+)"[^>]*>(.*?)</a>',
         re.IGNORECASE | re.DOTALL,
@@ -48,9 +39,6 @@ def extract_listing_links(html: str):
         if title:
             listings[href] = title
 
-    # Fallback: if the regex above finds nothing (markup differs from what
-    # we expect), fall back to hashing visible list-item text blocks so we
-    # still detect *some* change rather than silently doing nothing.
     if not listings:
         items = re.findall(r'<li[^>]*class="[^"]*acadp[^"]*"[^>]*>(.*?)</li>',
                             html, re.IGNORECASE | re.DOTALL)
@@ -108,8 +96,6 @@ def main():
     previous = load_state()
 
     if not previous:
-        # First ever run: just record state, don't spam a notification
-        # for everything that's already on the site.
         print(f"First run — recording {len(current)} existing listing(s) as baseline.")
         save_state(current)
         return
